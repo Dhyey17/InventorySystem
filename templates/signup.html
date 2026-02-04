@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Sign Up{% endblock %}
+
+
+{% block content %}
+    <h2><strong> Sign UP </strong></h2>
+    {% if error%}
+        <div class="error" style="color: red">
+            <p>{{ error }}</p>
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        <label>Name:</label>
+        <input name="name" placeholder="Enter you name" type="text" required><br><br>
+        <label>Username:</label>
+        <input name="username" placeholder="Enter a username" type="text" required><br><br>
+        <label>Password</label>
+        <input name="password" type="password" placeholder="Enter your Password" required><br><br>
+        <button type="submit">Sign Up</button>
+        <br>
+        <p>
+            Already have acc? <a href="{{ url_for('login') }}">Login</a>
+        </p>
+    </form>
+
+{% endblock %}
