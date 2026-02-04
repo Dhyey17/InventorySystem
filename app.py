@@ -1,7 +1,8 @@
-from flask import Flask, request, render_template, redirect, url_for, session
-from dotenv import load_dotenv
 import os
-from models import db, Sellers
+from datetime import datetime
+from dotenv import load_dotenv
+from flask import Flask, request, render_template, redirect, url_for, session
+from models import db, Sellers, Products
 
 # Load environment variables from .env
 load_dotenv()
@@ -20,7 +21,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SECRET_KEY'] = "dev-secret-key"
 
 db.init_app(app)
 with app.app_context():
@@ -29,7 +30,9 @@ with app.app_context():
 
 @app.route('/')
 def home():
-    return render_template("home.html")
+    if session.get("seller_id"):
+        return redirect(url_for("products"))
+    return render_template("home.html", session=session)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -41,7 +44,7 @@ def signup():
         password = request.form['password'].strip()
 
         if not name:
-            error = 'Name is cannot be empty'
+            error = 'Name cannot be empty'
         elif not password:
             error = 'Password cannot be empty'
         elif not username:
@@ -53,7 +56,7 @@ def signup():
             db.session.add(user)
             db.session.commit()
             session["seller_id"] = user.ID
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('products'))
     return render_template('signup.html', error=error)
 
 
@@ -66,7 +69,7 @@ def login():
         user = Sellers.query.filter_by(username=username, password=password).first()
         if user:
             session["seller_id"] = user.ID
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('products'))
         else:
             error = 'Invalid Credentials'
     return render_template("login.html", error=error)
@@ -77,10 +80,92 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-@app.route("/dashboard")
-def dashboard():
-    return "This is Dashboard"
+
+@app.route('/products', methods=['GET'])
+def products():
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+    status = request.args.get('status')
+    products = Products.query.filter_by(seller_id=session["seller_id"]).all()
+    return render_template("products.html", products=products, status=status)
+
+
+@app.route('/products/add', methods=['GET', 'POST'])
+def add_product():
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+
+    error = None
+
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        price = request.form['price'].strip()
+        quantity = request.form['quantity'].strip()
+        category = request.form['category'].strip()
+        expiry = request.form['expiry'].strip()
+
+        if not name or not price or not quantity or not category:
+            error = "All fields except expiry are required"
+        else:
+            expiry_value = (datetime.strptime(expiry, "%Y-%m-%d") if expiry else None)
+
+            product = Products(name=name, price=float(price), quantity=int(quantity), category=category,
+                               expiry=expiry_value, seller_id=session["seller_id"])
+            db.session.add(product)
+            db.session.commit()
+
+            return redirect(url_for("products", status="Product added successfully"))
+
+    return render_template("add_product.html", error=error)
+
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+
+    product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first()
+    if not product:
+        return redirect(url_for("products", error="Product not found"))
+
+    return render_template("product_detail.html", product=product)
+
+
+@app.route('/products/update/<int:product_id>', methods=['GET', 'POST'])
+def update_product(product_id):
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+
+    product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first_or_404()
+
+    if request.method == 'POST':
+        product.name = request.form['name']
+        product.price = float(request.form['price'])
+        product.quantity = int(request.form['quantity'])
+        product.category = request.form['category']
+        expiry = request.form['expiry'] or None
+        product.expiry = (datetime.strptime(expiry, "%Y-%m-%d") if expiry else None)
+
+        db.session.commit()
+        return redirect(url_for("products", status="Product updated successfully"))
+
+    return render_template("update_product.html", product=product)
+
+
+@app.route('/products/delete/<int:product_id>', methods=['GET', 'POST'])
+def delete_product(product_id):
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+
+    product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first_or_404()
+
+    if request.method == 'POST':
+        db.session.delete(product)
+        db.session.commit()
+        return redirect(url_for("products", status="Product deleted successfully"))
+
+    return render_template("delete_product.html", product=product)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+
+{% block content %}
+    {% if status %}
+        <p class="status" style="color: lawngreen">{{ status }}</p>
+    {% endif %}
+    <h2>Products</h2>
+    <p>
+        <a href="{{ url_for('add_product') }}">
+            <button type="button">Add Product</button>
+        </a>
+    </p>
+
+    <hr>
+
+    <div class="products-container">
+        {% for p in products %}
+            <div class="product-card">
+                <h3>
+                    <a href="{{ url_for('product_detail', product_id=p.ID) }}">
+                        {{ p.name }}
+                    </a>
+                </h3>
+
+                <p><strong>Category:</strong> {{ p.category }}</p>
+                <p><strong>Price:</strong> ₹{{ p.price }}</p>
+                <p><strong>Quantity:</strong> {{ p.quantity }}</p>
+
+                <a href="{{ url_for('update_product', product_id=p.ID) }}">
+                    <button>Edit</button>
+                </a>
+
+                <a href="{{ url_for('delete_product', product_id=p.ID) }}">
+                    <button>Delete</button>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+{% endblock %}
