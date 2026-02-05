@@ -85,9 +85,12 @@ def logout():
 def products():
     if "seller_id" not in session:
         return redirect(url_for("login"))
+
     status = request.args.get('status')
+    error = request.args.get("error")
+
     products = Products.query.filter_by(seller_id=session["seller_id"]).all()
-    return render_template("products.html", products=products, status=status)
+    return render_template("products.html", products=products, status=status, error=error)
 
 
 @app.route('/products/add', methods=['GET', 'POST'])
@@ -106,6 +109,7 @@ def add_product():
 
         if not name or not price or not quantity or not category:
             error = "All fields except expiry are required"
+
         else:
             expiry_value = (datetime.strptime(expiry, "%Y-%m-%d") if expiry else None)
 
@@ -113,7 +117,6 @@ def add_product():
                                expiry=expiry_value, seller_id=session["seller_id"])
             db.session.add(product)
             db.session.commit()
-
             return redirect(url_for("products", status="Product added successfully"))
 
     return render_template("add_product.html", error=error)
