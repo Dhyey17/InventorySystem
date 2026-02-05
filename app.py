@@ -1,8 +1,10 @@
 import os
 from datetime import datetime
+
 from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for, session
-from models import db, Sellers, Products
+
+from models import db, Sellers, Products, Orders, OrderItems
 
 # Load environment variables from .env
 load_dotenv()
@@ -89,8 +91,8 @@ def products():
     status = request.args.get('status')
     error = request.args.get("error")
 
-    products = Products.query.filter_by(seller_id=session["seller_id"]).all()
-    return render_template("products.html", products=products, status=status, error=error)
+    products_list = Products.query.filter_by(seller_id=session["seller_id"]).all()
+    return render_template("products.html", products=products_list, status=status, error=error)
 
 
 @app.route('/products/add', methods=['GET', 'POST'])
@@ -168,6 +170,89 @@ def delete_product(product_id):
         return redirect(url_for("products", status="Product deleted successfully"))
 
     return render_template("delete_product.html", product=product)
+
+
+@app.route("/orders")
+def orders():
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+
+    orders_list = Orders.query.filter_by(seller_id=session["seller_id"]).all()
+    return render_template("orders.html", orders=orders_list, status=request.args.get("status"))
+
+
+@app.route("/order/create")
+def create_order():
+    products_list = Products.query.filter_by(seller_id=session["seller_id"]).all()
+    order_items = session.get("order_items", [])
+    return render_template("create_order.html", products=products_list, order_items=order_items)
+
+
+@app.route("/order/add-item", methods=["POST"])
+def add_order_item():
+    product = Products.query.get_or_404(request.form["product_id"])
+
+    items = session.get("order_items", [])
+    items.append({
+        "product_id": product.ID,
+        "name": product.name,
+        "quantity": int(request.form["quantity"]),
+        "price": product.price
+    })
+
+    session["order_items"] = items
+    session.modified = True
+    return redirect(url_for("create_order"))
+
+
+@app.route("/order/submit", methods=["POST"])
+def submit_order():
+    items = session.get("order_items", [])
+    order_type = request.form["order_type"]
+    if not items:
+        return redirect(url_for("create_order"))
+
+    order = Orders(seller_id=session["seller_id"], type=order_type, total_price=0)
+    db.session.add(order)
+    db.session.commit()
+
+    total = 0
+    for i in items:
+        product = Products.query.get(i["product_id"])
+        db.session.add(OrderItems(order_id=order.ID, product_id=product.ID, quantity=i["quantity"], price=i["price"]))
+        if order_type == "Incoming":
+            product.quantity += i["quantity"]
+        else:
+            product.quantity -= i["quantity"]
+        total += (i["quantity"] * i["price"])
+
+    order.total_price = total
+    db.session.commit()
+    session.pop("order_items", None)
+    return redirect(url_for("orders", status="Order created"))
+
+
+@app.route("/order/<int:order_id>")
+def order_detail(order_id):
+    if "seller_id" not in session:
+        return redirect(url_for("login"))
+
+    order = Orders.query.filter_by(ID=order_id, seller_id=session["seller_id"]).first()
+    if not order:
+        return redirect(url_for("orders", error="Order not found"))
+
+    order_items = OrderItems.query.filter_by(order_id=order.ID).all()
+    detailed_items = []
+    for item in order_items:
+        product = Products.query.get(item.product_id)
+        detailed_items.append({
+            "id": item.ID,
+            "product_name": product.name if product else "Deleted Product",
+            "quantity": item.quantity,
+            "price": item.price,
+            "total": item.price * item.quantity
+        })
+    return render_template("order_detail.html", order=order, order_items=detailed_items)
 
 
 if __name__ == '__main__':
