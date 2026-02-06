@@ -162,13 +162,13 @@ p {
     line-height: 1.4;
 }
 
-/* ---------- Centered Auth & Form Pages ---------- */
-.container {
-    min-height: calc(100vh - 90px); /* navbar height compensation */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+/*!* ---------- Centered Auth & Form Pages ---------- *!*/
+/*.container {*/
+/*    min-height: calc(100vh - 90px); !* navbar height compensation *!*/
+/*    display: flex;*/
+/*    justify-content: center;*/
+/*    align-items: center;*/
+/*}*/
 
 /* Form wrapper alignment */
 .container > form,
