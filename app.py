@@ -1,9 +1,7 @@
 import os
 from datetime import datetime
-
 from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for, session
-
 from models import db, Sellers, Products, Orders, OrderItems
 
 # Load environment variables from .env
@@ -15,6 +13,7 @@ PASSWORD = os.getenv("DB_PASSWORD")
 HOST = os.getenv("DB_HOST")
 PORT = os.getenv("DB_PORT")
 DBNAME = os.getenv("DB_NAME")
+secrete = os.getenv("SECRETE_KEY")
 
 # Construct the SQLAlchemy connection string
 DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
@@ -22,19 +21,23 @@ DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['DEBUG'] = True
-app.config['SECRET_KEY'] = "dev-secret-key"
+app.config['SECRET_KEY'] = secrete
+app.config["DEBUG"] = os.environ.get("FLASK_DEBUG") == "1"
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
 
 db.init_app(app)
-# with app.app_context():
-#     db.create_all()
+with app.app_context():
+    db.create_all()
 
 
 @app.route('/')
 def home():
     if session.get("seller_id"):
         return redirect(url_for("products"))
-    return render_template("home.html", session=session)
+    return render_template("home.html")
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -257,4 +260,4 @@ def order_detail(order_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0")
+    app.run()
