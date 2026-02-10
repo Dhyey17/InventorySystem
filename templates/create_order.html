@@ -2,56 +2,74 @@
 {% block title %}Create Order{% endblock %}
 
 {% block content %}
-    <h2>Create Order</h2>
+    <div class="page-header">
+        <h2>Create Order</h2>
+    </div>
 
-
-    {% if order_items %}
-        <table>
-            <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Total</th>
-            </tr>
-            {% for i in order_items %}
-                <tr>
-                    <td>{{ i.name }}</td>
-                    <td>{{ i.quantity }}</td>
-                    <td>₹{{ i.price }}</td>
-                    <td>₹{{ i.price * i.quantity }}</td>
-                </tr>
-            {% endfor %}
-        </table>
-
-        <hr>
-
-        <form method="post" action="{{ url_for('submit_order') }}">
-            <label>Order Type:</label>
-            <select name="order_type">
-                <option value="Incoming">Restock</option>
-                <option value="Outgoing">Sell</option>
-            </select>
-            <button type="submit">Generate Bill</button>
-        </form>
-
-    {% else %}
-        <p><strong>No items added yet.</strong></p>
-
+    {% if error %}
+        <div class="status-banner error">{{ error }}</div>
     {% endif %}
 
-    <br><br>
-    <h2>Add Items</h2>
-    <form method="post" action="{{ url_for('add_order_item') }}">
-        <label>Product: </label>
-        <select name="product_id">
-            {% for p in products %}
-                <option value="{{ p.ID }}">{{ p.name }} (Stock: {{ p.quantity }})</option>
-            {% endfor %}
-        </select>
+    {% if order_items %}
+        <div class="create-order-section order-cart-table-wrap">
+            <h3 class="create-order-section__title">Cart</h3>
+            <table>
+                <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th class="table-cell-actions"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i in order_items %}
+                    <tr>
+                        <td>{{ i.name }}</td>
+                        <td>{{ i.quantity }}</td>
+                        <td>₹{{ i.price }}</td>
+                        <td>₹{{ i.price * i.quantity }}</td>
+                        <td class="table-cell-actions">
+                            <form class="form-inline" method="post" action="{{ url_for('remove_order_item') }}">
+                                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                                <button type="submit" class="btn-remove">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-        <label>Quantity:</label>
-        <input type="number" name="quantity" min="1" required>
-        <button type="submit">Add Item</button>
-    </form>
+        <div class="create-order-section order-submit-form">
+            <form method="post" action="{{ url_for('submit_order') }}">
+                <label for="order_type">Order type</label>
+                <select name="order_type" id="order_type">
+                    <option value="Incoming">Restock</option>
+                    <option value="Outgoing">Sell</option>
+                </select>
+                <button type="submit">Generate bill</button>
+            </form>
+        </div>
+    {% else %}
+        <div class="create-order-section">
+            <p class="order-empty-notice">No items in cart yet. Add items below.</p>
+        </div>
+    {% endif %}
 
+    <div class="create-order-section order-add-card section-gap">
+        <h3 class="create-order-section__title">Add items</h3>
+        <form method="post" action="{{ url_for('add_order_item') }}">
+            <label for="product_id">Product</label>
+            <select name="product_id" id="product_id">
+                {% for p in products %}
+                    <option value="{{ p.ID }}">{{ p.name }} (Stock: {{ p.quantity }})</option>
+                {% endfor %}
+            </select>
+            <label for="quantity">Quantity</label>
+            <input type="number" name="quantity" id="quantity" min="1" required>
+            <button type="submit">Add to cart</button>
+        </form>
+    </div>
 {% endblock %}

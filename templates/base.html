@@ -2,27 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Inventory Management{% endblock %}</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
-<nav>
+<nav class="main-nav">
     <a href="{{ url_for('home') }}">Home</a>
-
     {% if session.get("seller_id") %}
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
         <a href="{{ url_for('products') }}">Products</a>
         <a href="{{ url_for('orders') }}">Orders</a>
         <a href="{{ url_for('logout') }}">Logout</a>
     {% else %}
         <a href="{{ url_for('login') }}">Login</a>
-        <a href="{{ url_for('signup') }}">Signup</a>
+        <a href="{{ url_for('signup') }}">Sign up</a>
     {% endif %}
-
 </nav>
 <hr>
 
-<div class="container">
+<div class="container {% block container_class %}{% endblock %}">
     {% block content %} {% endblock %}
 </div>
 

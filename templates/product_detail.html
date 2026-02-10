@@ -2,25 +2,30 @@
 {% block title %}Product Details{% endblock %}
 
 {% block content %}
-    <h2>{{ product.name }}</h2>
-
-    <p><strong>Category:</strong> {{ product.category }}</p>
-    <p><strong>Price:</strong> ₹{{ product.price }}</p>
-    <p><strong>Quantity:</strong> {{ product.quantity }}</p>
-    <p><strong>Expiry:</strong> {{ product.expiry if product.expiry else "N/A" }}</p>
-
-    <hr>
-
-    <a href="{{ url_for('update_product', product_id=product.ID) }}">
-        <button>Edit</button>
-    </a>
-
-    <a href="{{ url_for('delete_product', product_id=product.ID) }}">
-        <button>Delete</button>
-    </a>
-
-    <a href="{{ url_for('products') }}">
-        <button>Back</button>
-    </a>
-
+    <div class="detail-card">
+        <h2>{{ product.name }}</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>Category</label>
+                <span class="value">{{ product.category }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Price</label>
+                <span class="value">₹{{ product.price }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Quantity</label>
+                <span class="value">{{ product.quantity }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Expiry</label>
+                <span class="value">{{ product.expiry if product.expiry else "N/A" }}</span>
+            </div>
+        </div>
+        <div class="detail-actions">
+            <a href="{{ url_for('update_product', product_id=product.ID) }}" class="btn">Edit</a>
+            <a href="{{ url_for('delete_product', product_id=product.ID) }}" class="btn btn-danger">Delete</a>
+            <a href="{{ url_for('products') }}" class="btn">Back to Products</a>
+        </div>
+    </div>
 {% endblock %}

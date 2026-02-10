@@ -2,34 +2,41 @@
 {% block title %}Orders{% endblock %}
 
 {% block content %}
-    <h2>Orders</h2>
-
     {% if status %}
-        <p class="status" style="color: lawngreen">{{ status }}</p>
+        <div class="status-banner status">{{ status }}</div>
     {% endif %}
-
     {% if error %}
-        <p class="error" style="color: red">{{ error }}</p>
+        <div class="status-banner error">{{ error }}</div>
     {% endif %}
 
-    <a href="{{ url_for('create_order') }}">
-        <button>Create Order</button>
-    </a>
+    <div class="page-header">
+        <h2>Orders</h2>
+        <a href="{{ url_for('create_order') }}" class="btn">+ Create Order</a>
+    </div>
 
     <div class="orders-container">
         {% for order in orders %}
-            <div class="product-card">
-                <h3>
-                    <a href="{{ url_for('order_detail', order_id=order.ID) }}">
-                        <strong>Order #{{ order.ID }}</strong>
-                    </a>
-                </h3>
-                <p><strong>Type:</strong> {{ order.type }}</p>
-                <p><strong>Total:</strong> ₹{{ order.total_price }}</p>
-                <p><strong>Date:</strong> {{ order.created_at.strftime("%d %b %Y %H:%M") }}</p>
+            <div class="order-card">
+                <div class="card-accent"></div>
+                <div class="card-body">
+                    <h3>
+                        <a href="{{ url_for('order_detail', order_id=order.ID) }}">
+                            Order #{{ order.ID }}
+                        </a>
+                        <span class="order-type-badge {{ order.type|lower }}">{{ order.type }}</span>
+                    </h3>
+                    <div class="card-meta">
+                        <p><strong>Total</strong> ₹{{ order.total_price }}</p>
+                        <p><strong>Date</strong> {{ order.created_at.strftime("%d %b %Y %H:%M") }}</p>
+                    </div>
+                    <div class="card-actions">
+                        <a href="{{ url_for('order_detail', order_id=order.ID) }}" class="btn">View order</a>
+                    </div>
+                </div>
             </div>
         {% else %}
-            <p>No orders found.</p>
+            <p class="empty-state">No orders yet. <a href="{{ url_for('create_order') }}">Create your first order</a>.
+            </p>
         {% endfor %}
     </div>
 {% endblock %}

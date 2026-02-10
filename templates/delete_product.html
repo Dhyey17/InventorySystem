@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Delete Product{% endblock %}
+{% block container_class %}container--form-page{% endblock %}
 
 {% block content %}
-    <h3>Are you sure you want to delete "{{ product.name }}"?</h3>
+    <h2 class="delete-confirm-title">Delete product?</h2>
+    <p class="delete-confirm-lead">Are you sure you want to delete <strong>"{{ product.name }}"</strong>? This cannot be
+        undone.</p>
 
     <form method="POST">
-        <button type="submit">Yes, Delete</button>
-        <a href="{{ url_for('products') }}">
-            <button type="button">Cancel</button>
-        </a>
+        <div class="form-actions">
+            <button type="submit">Yes, Delete</button>
+            <a href="{{ url_for('products') }}" class="btn">Cancel</a>
+        </div>
     </form>
 
 {% endblock %}

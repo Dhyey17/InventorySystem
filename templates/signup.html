@@ -1,26 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Sign Up{% endblock %}
-
+{% block container_class %}container--form-page{% endblock %}
 
 {% block content %}
     {% if error %}
-        <div class="error" style="color: red">
-            <p>{{ error }}</p>
-        </div>
+        <div class="status-banner error">{{ error }}</div>
     {% endif %}
 
     <form method="POST">
-        <h2><strong> Sign UP </strong></h2>
-        <label>Name:</label>
-        <input name="name" placeholder="Enter you name" type="text" required><br><br>
-        <label>Username:</label>
-        <input name="username" placeholder="Enter a username" type="text" required><br><br>
-        <label>Password</label>
-        <input name="password" type="password" placeholder="Enter your Password" required><br><br>
-        <button type="submit">Sign Up</button>
-        <br>
+        <h2>Sign up</h2>
+        <label for="name">Name</label>
+        <input name="name" id="name" placeholder="Your name" type="text" required>
+        <label for="username">Username</label>
+        <input name="username" id="username" placeholder="Username" type="text" required>
+        <label for="password">Password</label>
+        <input name="password" id="password" type="password" placeholder="Password" required>
+        <button type="submit">Sign up</button>
         <p class="auth">
-            Already have acc? <a href="{{ url_for('login') }}">Login</a>
+            Already have an account? <a href="{{ url_for('login') }}">Login</a>
         </p>
     </form>
 

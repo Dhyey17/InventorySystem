@@ -2,17 +2,21 @@
 {% block title %}Order Details{% endblock %}
 
 {% block content %}
-    <h2>Order #{{ order.ID }}</h2>
+    <div class="order-header-card">
+        <h2>
+            Order #{{ order.ID }}
+            <span class="order-type-badge {{ order.type|lower }}">{{ order.type }}</span>
+        </h2>
+        <div class="order-meta">
+            <span><strong>Date</strong> {{ order.created_at.strftime("%d %b %Y, %H:%M") }}</span>
+        </div>
+    </div>
 
-    <p><strong>Type:</strong> {{ order.type }}</p>
-    <p><strong>Date:</strong> {{ order.created_at.strftime("%d %b %Y, %H:%M") }}</p>
-
-    <hr>
-
-    <h3>Order Items</h3>
+    <h3 class="section-title">Order Items</h3>
 
     {% if order_items %}
         <table>
+            <thead>
             <tr>
                 <th>ID</th>
                 <th>Product Name</th>
@@ -20,7 +24,8 @@
                 <th>Price</th>
                 <th>Total</th>
             </tr>
-
+            </thead>
+            <tbody>
             {% for item in order_items %}
                 <tr>
                     <td>{{ item.id }}</td>
@@ -30,20 +35,18 @@
                     <td>₹{{ item.total }}</td>
                 </tr>
             {% endfor %}
+            </tbody>
         </table>
     {% else %}
         <p>No items found for this order.</p>
     {% endif %}
 
-    <hr>
+    <div class="grand-total-box">
+        <div class="label">Grand Total</div>
+        <div class="amount">₹{{ order.total_price }}</div>
+    </div>
 
-    <p>
-        <strong>Grand Total:</strong> ₹{{ order.total_price }}
+    <p class="page-actions">
+        <a href="{{ url_for('orders') }}" class="btn">Back to Orders</a>
     </p>
-
-    <br>
-
-    <a href="{{ url_for('orders') }}">
-        <button type="button">Back to Orders</button>
-    </a>
 {% endblock %}

@@ -1,5 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
@@ -9,6 +9,8 @@ class Sellers(db.Model):
     name = db.Column(db.String(30), nullable=False)
     username = db.Column(db.String(50), nullable=False, unique=True)
     password = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(50), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
 
 
 class Products(db.Model):
@@ -19,6 +21,7 @@ class Products(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     expiry = db.Column(db.DateTime, nullable=True)
     category = db.Column(db.String(50), nullable=False)
+    is_deleted = db.Column(db.Boolean, nullable=False, default=False)
 
 
 class Orders(db.Model):
