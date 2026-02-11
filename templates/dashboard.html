@@ -14,6 +14,7 @@
                     <th>Sr No.</th>
                     <th>Name</th>
                     <th>Price</th>
+                    <th>Total Sold</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -23,6 +24,7 @@
                             <td>{{ i + 1 }}</td>
                             <td>{{ order_items[i]["name"] }}</td>
                             <td>₹{{ order_items[i]["Price"] }}</td>
+                            <td>{{ order_items[i]["quantity"] }}</td>
                         </tr>
                     {% endfor %}
                 {% else %}
@@ -31,6 +33,7 @@
                             <td>{{ i + 1 }}</td>
                             <td>{{ order_items[i]["name"] }}</td>
                             <td>₹{{ order_items[i]["Price"] }}</td>
+                            <td>{{ order_items[i]["quantity"] }}</td>
                         </tr>
                     {% endfor %}
                 {% endif %}
@@ -39,8 +42,8 @@
         </div>
 
     {% else %}
-         <p class="empty-state">
-             No orders yet.
-         </p>
+        <p class="empty-state">
+            No orders yet.
+        </p>
     {% endif %}
 {% endblock %}

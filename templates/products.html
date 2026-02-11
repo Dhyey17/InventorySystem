@@ -6,6 +6,10 @@
         <div class="status-banner status">{{ status }}</div>
     {% endif %}
 
+    {% if error %}
+        <div class="status-banner error">{{ error }}</div>
+    {% endif %}
+
     <div class="page-header">
         <h2>Products</h2>
         <a href="{{ url_for('add_product') }}" class="btn">+ Add Product</a>

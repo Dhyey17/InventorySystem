@@ -1,14 +1,12 @@
 import os
 from datetime import datetime
-from typing import final
-
 from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_migrate import Migrate
-
 from exceptions import InsufficientStockError, ItemNotFoundError, UnauthorizedError
 from models import db, Sellers, Products, Orders, OrderItems
 from utils import login_required
+from werkzeug.utils import secure_filename
 
 # Load environment variables from .env
 load_dotenv()
@@ -62,11 +60,11 @@ def home():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    error = None
+    error = request.args.get("error")
     if request.method == 'POST':
         name = request.form['name'].strip()
         username = request.form['username'].strip()
-        password = request.form['password'].strip()
+        password = request.form['password']
 
         if not name:
             error = 'Name cannot be empty'
@@ -90,7 +88,7 @@ def login():
     error = request.args.get("error")
     if request.method == 'POST':
         username = request.form['username'].strip()
-        password = request.form['password'].strip()
+        password = request.form['password']
         user = Sellers.query.filter_by(username=username, password=password).first()
         if user:
             if user.is_active:
@@ -120,23 +118,26 @@ def dashboard():
         for item in order_item_list:
             item_list.setdefault(item.product_id, 0)
             item_list[item.product_id] += 1
-    swapped_item_list={}
+    swapped_item_list = {}
     for key, value in item_list.items():
-        swapped_item_list.setdefault(value,[])
-        swapped_item_list[value]+=[key]
+        swapped_item_list.setdefault(value, [])
+        swapped_item_list[value] += [key]
 
-    frequent_counts_list=[key for key in sorted(swapped_item_list.keys(), reverse=True)]
-    frequent_items_sorted=[]
+    frequent_counts_list = [key for key in sorted(swapped_item_list.keys(), reverse=True)]
+    frequent_items_sorted = []
     for count in frequent_counts_list:
         frequent_items_sorted.extend(swapped_item_list[count])
-    items =[]
+    items = []
     for id in frequent_items_sorted:
         product = Products.query.filter_by(ID=id).first()
+        order_item = OrderItems.query.filter_by(product_id=id).all()
+        order_quantity = [item.quantity for item in order_item]
         items.append({
-            "name":product.name,
-            "Price":product.price
+            "name": product.name,
+            "Price": product.price,
+            "quantity": sum(order_quantity)
         })
-    return render_template("dashboard.html",order_items=items)
+    return render_template("dashboard.html", order_items=items)
 
 
 @app.route('/products', methods=['GET'])
@@ -187,7 +188,7 @@ def product_detail(product_id):
     login_required(session)
 
     product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first()
-    if not product:
+    if not product or product.is_deleted:
         raise ItemNotFoundError("Product does not exist")
 
     return render_template("product_detail.html", product=product)
