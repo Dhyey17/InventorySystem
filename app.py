@@ -61,7 +61,7 @@ def home():
     error = request.args.get("error")
     if session.get("seller_id"):
         return redirect(url_for("products"))
-    return render_template("home.html", error=error, weather=requests.get())
+    return render_template("home.html", error=error)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
