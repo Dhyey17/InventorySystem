@@ -9,7 +9,7 @@
         <div class="status-banner error">{{ error }}</div>
     {% endif %}
 
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <label for="name">Name</label>
         <input name="name" id="name" value="{{ product.name }}" required>
 
@@ -25,6 +25,9 @@
         <label for="expiry">Expiry</label>
         <input name="expiry" id="expiry" type="date"
                value="{{ product.expiry.strftime('%Y-%m-%d') if product.expiry else '' }}">
+
+        <label for="image">Choose an image:</label>
+        <input name="image" id="image" type="file" accept="image/*">
 
         <button type="submit">Update Product</button>
     </form>

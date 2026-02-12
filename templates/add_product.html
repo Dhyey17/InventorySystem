@@ -9,21 +9,25 @@
         <div class="status-banner error">{{ error }}</div>
     {% endif %}
 
-    <form method="POST">
-        <label for="name">Name</label>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="name">Name:</label>
         <input name="name" id="name" required>
 
-        <label for="price">Price</label>
+        <label for="price">Price:</label>
         <input name="price" id="price" type="number" step="0.01" required>
 
-        <label for="quantity">Quantity</label>
+        <label for="quantity">Quantity:</label>
         <input name="quantity" id="quantity" type="number" required>
 
-        <label for="category">Category</label>
+        <label for="category">Category:</label>
         <input name="category" id="category" required>
 
-        <label for="expiry">Expiry</label>
+        <label for="expiry">Expiry:</label>
         <input name="expiry" id="expiry" type="date">
+
+        <label for="image">Choose an image:</label>
+        <input name="image" id="image" type="file" accept="image/*">
+
 
         <button type="submit">Add Product</button>
     </form>

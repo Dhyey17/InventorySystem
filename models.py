@@ -22,6 +22,7 @@ class Products(db.Model):
     expiry = db.Column(db.DateTime, nullable=True)
     category = db.Column(db.String(50), nullable=False)
     is_deleted = db.Column(db.Boolean, nullable=False, default=False)
+    image_url = db.Column(db.String(500), nullable=True)
 
 
 class Orders(db.Model):

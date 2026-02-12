@@ -1,12 +1,14 @@
 import os
 from datetime import datetime
+
 from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_migrate import Migrate
+from supabase import Client, create_client
+
 from exceptions import InsufficientStockError, ItemNotFoundError, UnauthorizedError
 from models import db, Sellers, Products, Orders, OrderItems
 from utils import login_required
-from werkzeug.utils import secure_filename
 
 # Load environment variables from .env
 load_dotenv()
@@ -18,9 +20,13 @@ HOST = os.getenv("DB_HOST")
 PORT = os.getenv("DB_PORT")
 DBNAME = os.getenv("DB_NAME")
 secret = os.getenv("SECRETE_KEY")
+supabase_key = os.environ.get("SUPABASE_KEY")
+supabase_url = os.environ.get("SUPABASE_URL")
 
 # Construct the SQLAlchemy connection string
 DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+
+sb: Client = create_client(supabase_url, supabase_key)
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -55,7 +61,7 @@ def home():
     error = request.args.get("error")
     if session.get("seller_id"):
         return redirect(url_for("products"))
-    return render_template("home.html", error=error)
+    return render_template("home.html", error=error, weather=requests.get())
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -161,6 +167,7 @@ def add_product():
         quantity = request.form.get('quantity', '').strip()
         category = request.form.get('category', '').strip()
         expiry = request.form.get('expiry', '').strip()
+        image = request.files.get('image', "")
 
         if not name or not price or not quantity or not category:
             error = "All fields except expiry are required"
@@ -170,10 +177,19 @@ def add_product():
                 quantity_i = int(quantity)
                 if price_f < 0 or quantity_i < 0:
                     error = "Price and quantity must be 0 or greater"
+
                 else:
+                    if not image and image.filename:
+                        image_url = None
+                    else:
+                        sb.storage.from_("product-images").upload(f"{session["seller_id"]}/{image.filename}",
+                                                                  image.read(),
+                                                                  {"content_type": image.content_type})
+                        image_url = sb.storage.from_("product-images").get_public_url(
+                            f"{session["seller_id"]}/{image.filename}")
                     expiry_value = datetime.strptime(expiry, "%Y-%m-%d") if expiry else None
                     product = Products(name=name, price=price_f, quantity=quantity_i, category=category,
-                                       expiry=expiry_value, seller_id=session["seller_id"])
+                                       expiry=expiry_value, seller_id=session["seller_id"], image_url=image_url)
                     db.session.add(product)
                     db.session.commit()
                     return redirect(url_for("products", status="Product added successfully"))
@@ -199,15 +215,24 @@ def update_product(product_id):
     login_required(session)
 
     product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first_or_404()
-
     if request.method == 'POST':
         try:
+            image = request.files.get('image')
+            if image and image.filename:
+                image_data = image.read()
+                response = sb.storage.from_("product-images").upload(f"{session["seller_id"]}/{image.filename}",
+                                                                     image_data, {"content-type": image.content_type,
+                                                                                  "upsert": "true"})
+                product.image_url = sb.storage.from_("product-images").get_public_url(
+                    f"{session["seller_id"]}/{image.filename}") or None
+
             product.name = request.form.get('name', '').strip() or product.name
             product.price = float(request.form.get('price', product.price))
             product.quantity = int(request.form.get('quantity', product.quantity))
             product.category = request.form.get('category', '').strip() or product.category
             expiry = request.form.get('expiry') or None
             product.expiry = datetime.strptime(expiry, "%Y-%m-%d") if expiry else None
+
             if product.price < 0 or product.quantity < 0:
                 return render_template("update_product.html", product=product,
                                        error="Price and quantity must be 0 or greater")
