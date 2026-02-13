@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_migrate import Migrate
 from supabase import Client, create_client
+from sqlalchemy import func, desc
 
 from exceptions import InsufficientStockError, ItemNotFoundError, UnauthorizedError
 from models import db, Sellers, Products, Orders, OrderItems
@@ -26,8 +27,6 @@ supabase_url = os.environ.get("SUPABASE_URL")
 # Construct the SQLAlchemy connection string
 DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
 
-sb: Client = create_client(supabase_url, supabase_key)
-
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -39,6 +38,7 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True,
 
 db.init_app(app)
 migrate = Migrate(app, db)
+sb: Client = create_client(supabase_url, supabase_key)
 
 
 @app.errorhandler(InsufficientStockError)
@@ -59,7 +59,7 @@ def unauthorized(error):
 @app.route('/')
 def home():
     error = request.args.get("error")
-    if session.get("seller_id"):
+    if session.get('seller_id'):
         return redirect(url_for("products"))
     return render_template("home.html", error=error)
 
@@ -84,7 +84,7 @@ def signup():
             user = Sellers(username=username, name=name, password=password)
             db.session.add(user)
             db.session.commit()
-            session["seller_id"] = user.ID
+            session['seller_id'] = user.ID
             return redirect(url_for('products'))
     return render_template('signup.html', error=error)
 
@@ -98,7 +98,7 @@ def login():
         user = Sellers.query.filter_by(username=username, password=password).first()
         if user:
             if user.is_active:
-                session["seller_id"] = user.ID
+                session['seller_id'] = user.ID
                 return redirect(url_for('products'))
             else:
                 raise UnauthorizedError("User does not exist")
@@ -116,34 +116,35 @@ def logout():
 @app.route('/dashboard')
 def dashboard():
     login_required(session)
-    order_list = Orders.query.filter_by(seller_id=session["seller_id"], type="Outgoing").all()
+    items = (
+        db.session.query(
+            Products.name.label("name"),
+            Products.price.label("Price"),
+            func.sum(OrderItems.quantity).label("quantity"),
+            func.count(OrderItems.product_id).label("order_count")
+        )
+        .join(OrderItems, OrderItems.product_id == Products.ID)
+        .join(Orders, Orders.ID == OrderItems.order_id)
+        .filter(
+            Orders.seller_id == session['seller_id'],
+            Orders.type == "Outgoing"
+        )
+        .group_by(Products.ID, Products.name, Products.price)
+        .order_by(desc("order_count"))
+        .all()
+    )
 
-    item_list = {}
-    for order in order_list:
-        order_item_list = OrderItems.query.filter_by(order_id=order.ID).all()
-        for item in order_item_list:
-            item_list.setdefault(item.product_id, 0)
-            item_list[item.product_id] += 1
-    swapped_item_list = {}
-    for key, value in item_list.items():
-        swapped_item_list.setdefault(value, [])
-        swapped_item_list[value] += [key]
+    # Convert result into list of dicts (same format as before)
+    result = [
+        {
+            "name": item.name,
+            "Price": item.Price,
+            "quantity": item.quantity
+        }
+        for item in items
+    ]
 
-    frequent_counts_list = [key for key in sorted(swapped_item_list.keys(), reverse=True)]
-    frequent_items_sorted = []
-    for count in frequent_counts_list:
-        frequent_items_sorted.extend(swapped_item_list[count])
-    items = []
-    for id in frequent_items_sorted:
-        product = Products.query.filter_by(ID=id).first()
-        order_item = OrderItems.query.filter_by(product_id=id).all()
-        order_quantity = [item.quantity for item in order_item]
-        items.append({
-            "name": product.name,
-            "Price": product.price,
-            "quantity": sum(order_quantity)
-        })
-    return render_template("dashboard.html", order_items=items)
+    return render_template("dashboard.html", order_items=result)
 
 
 @app.route('/products', methods=['GET'])
@@ -153,7 +154,7 @@ def products():
     status = request.args.get('status')
     error = request.args.get("error")
 
-    products_list = Products.query.filter_by(seller_id=session["seller_id"]).all()
+    products_list = Products.query.filter_by(seller_id=session['seller_id']).all()
     return render_template("products.html", products=products_list, status=status, error=error)
 
 
@@ -167,7 +168,7 @@ def add_product():
         quantity = request.form.get('quantity', '').strip()
         category = request.form.get('category', '').strip()
         expiry = request.form.get('expiry', '').strip()
-        image = request.files.get('image', "")
+        image = request.files.get('image')
 
         if not name or not price or not quantity or not category:
             error = "All fields except expiry are required"
@@ -182,14 +183,14 @@ def add_product():
                     if not image and image.filename:
                         image_url = None
                     else:
-                        sb.storage.from_("product-images").upload(f"{session["seller_id"]}/{image.filename}",
+                        sb.storage.from_("product-images").upload(f"{session['seller_id']}/{image.filename}",
                                                                   image.read(),
                                                                   {"content_type": image.content_type})
                         image_url = sb.storage.from_("product-images").get_public_url(
-                            f"{session["seller_id"]}/{image.filename}")
+                            f"{session['seller_id']}/{image.filename}")
                     expiry_value = datetime.strptime(expiry, "%Y-%m-%d") if expiry else None
                     product = Products(name=name, price=price_f, quantity=quantity_i, category=category,
-                                       expiry=expiry_value, seller_id=session["seller_id"], image_url=image_url)
+                                       expiry=expiry_value, seller_id=session['seller_id'], image_url=image_url)
                     db.session.add(product)
                     db.session.commit()
                     return redirect(url_for("products", status="Product added successfully"))
@@ -203,7 +204,7 @@ def add_product():
 def product_detail(product_id):
     login_required(session)
 
-    product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first()
+    product = Products.query.filter_by(ID=product_id, seller_id=session['seller_id']).first()
     if not product or product.is_deleted:
         raise ItemNotFoundError("Product does not exist")
 
@@ -214,17 +215,17 @@ def product_detail(product_id):
 def update_product(product_id):
     login_required(session)
 
-    product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first_or_404()
+    product = Products.query.filter_by(ID=product_id, seller_id=session['seller_id']).first_or_404()
     if request.method == 'POST':
         try:
             image = request.files.get('image')
             if image and image.filename:
                 image_data = image.read()
-                response = sb.storage.from_("product-images").upload(f"{session["seller_id"]}/{image.filename}",
+                response = sb.storage.from_("product-images").upload(f"{session['seller_id']}/{image.filename}",
                                                                      image_data, {"content-type": image.content_type,
                                                                                   "upsert": "true"})
                 product.image_url = sb.storage.from_("product-images").get_public_url(
-                    f"{session["seller_id"]}/{image.filename}") or None
+                    f"{session['seller_id']}/{image.filename}") or None
 
             product.name = request.form.get('name', '').strip() or product.name
             product.price = float(request.form.get('price', product.price))
@@ -249,7 +250,7 @@ def update_product(product_id):
 def delete_product(product_id):
     login_required(session)
 
-    product = Products.query.filter_by(ID=product_id, seller_id=session["seller_id"]).first_or_404()
+    product = Products.query.filter_by(ID=product_id, seller_id=session['seller_id']).first_or_404()
 
     if request.method == 'POST':
         product.is_deleted = True
@@ -263,7 +264,7 @@ def delete_product(product_id):
 def orders():
     login_required(session)
 
-    orders_list = Orders.query.filter_by(seller_id=session["seller_id"]).all()
+    orders_list = Orders.query.filter_by(seller_id=session['seller_id']).all()
     return render_template("orders.html", orders=orders_list, status=request.args.get("status"),
                            error=request.args.get("error"))
 
@@ -272,7 +273,7 @@ def orders():
 def create_order():
     login_required(session)
 
-    products_list = Products.query.filter_by(seller_id=session["seller_id"], is_deleted=False).all()
+    products_list = Products.query.filter_by(seller_id=session['seller_id'], is_deleted=False).all()
     order_items = session.get("order_items", [])
     error = request.args.get("error")
     return render_template("create_order.html", products=products_list, order_items=order_items, error=error)
@@ -287,7 +288,7 @@ def add_order_item():
     if not product_id or not quantity:
         return redirect(url_for("create_order", error="Missing product or quantity"))
 
-    product = Products.query.filter_by(ID=int(product_id), seller_id=session["seller_id"]).first()
+    product = Products.query.filter_by(ID=int(product_id), seller_id=session['seller_id']).first()
     if not product:
         raise ItemNotFoundError("Product Not Found")
 
@@ -340,7 +341,7 @@ def submit_order():
                 raise InsufficientStockError(
                     f"Not enough stock for {product.name} (have {product.quantity}, need {i['quantity']})")
 
-    order = Orders(seller_id=session["seller_id"], type=order_type, total_price=0)
+    order = Orders(seller_id=session['seller_id'], type=order_type, total_price=0)
     db.session.add(order)
     db.session.commit()
 
@@ -367,7 +368,7 @@ def submit_order():
 def order_detail(order_id):
     login_required(session)
 
-    order = Orders.query.filter_by(ID=order_id, seller_id=session["seller_id"]).first()
+    order = Orders.query.filter_by(ID=order_id, seller_id=session['seller_id']).first()
     if not order:
         return redirect(url_for("orders", error="Order not found"))
 
