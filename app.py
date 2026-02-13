@@ -7,6 +7,8 @@ from flask_migrate import Migrate
 from supabase import Client, create_client
 
 from exceptions import InsufficientStockError, ItemNotFoundError, UnauthorizedError
+from sqlalchemy import func
+
 from models import db, Sellers, Products, Orders, OrderItems
 from utils import login_required
 
@@ -116,33 +118,26 @@ def logout():
 @app.route('/dashboard')
 def dashboard():
     login_required(session)
-    order_list = Orders.query.filter_by(seller_id=session["seller_id"], type="Outgoing").all()
+    top_selling_items = (
+        db.session.query(
+            Products.name,
+            Products.price,
+            func.count(func.distinct(OrderItems.order_id)).label("order_frequency")
+        )
+        .join(OrderItems, OrderItems.product_id == Products.ID)
+        .join(Orders, Orders.ID == OrderItems.order_id)
+        .filter(Orders.seller_id == session["seller_id"], Orders.type == "Outgoing")
+        .group_by(Products.ID, Products.name, Products.price)
+        .order_by(func.count(func.distinct(OrderItems.order_id)).desc())
+        .all()
+    )
 
-    item_list = {}
-    for order in order_list:
-        order_item_list = OrderItems.query.filter_by(order_id=order.ID).all()
-        for item in order_item_list:
-            item_list.setdefault(item.product_id, 0)
-            item_list[item.product_id] += 1
-    swapped_item_list = {}
-    for key, value in item_list.items():
-        swapped_item_list.setdefault(value, [])
-        swapped_item_list[value] += [key]
+    items = [{
+        "name": item.name,
+        "price": item.price,
+        "quantity": item.order_frequency
+    } for item in top_selling_items]
 
-    frequent_counts_list = [key for key in sorted(swapped_item_list.keys(), reverse=True)]
-    frequent_items_sorted = []
-    for count in frequent_counts_list:
-        frequent_items_sorted.extend(swapped_item_list[count])
-    items = []
-    for id in frequent_items_sorted:
-        product = Products.query.filter_by(ID=id).first()
-        order_item = OrderItems.query.filter_by(product_id=id).all()
-        order_quantity = [item.quantity for item in order_item]
-        items.append({
-            "name": product.name,
-            "Price": product.price,
-            "quantity": sum(order_quantity)
-        })
     return render_template("dashboard.html", order_items=items)
 
 
@@ -167,7 +162,7 @@ def add_product():
         quantity = request.form.get('quantity', '').strip()
         category = request.form.get('category', '').strip()
         expiry = request.form.get('expiry', '').strip()
-        image = request.files.get('image', "")
+        image = request.files.get('image')
 
         if not name or not price or not quantity or not category:
             error = "All fields except expiry are required"
@@ -179,14 +174,14 @@ def add_product():
                     error = "Price and quantity must be 0 or greater"
 
                 else:
-                    if not image and image.filename:
+                    if not image or not image.filename:
                         image_url = None
                     else:
-                        sb.storage.from_("product-images").upload(f"{session["seller_id"]}/{image.filename}",
+                        sb.storage.from_("product-images").upload(f"{session['seller_id']}/{image.filename}",
                                                                   image.read(),
                                                                   {"content_type": image.content_type})
                         image_url = sb.storage.from_("product-images").get_public_url(
-                            f"{session["seller_id"]}/{image.filename}")
+                            f"{session['seller_id']}/{image.filename}")
                     expiry_value = datetime.strptime(expiry, "%Y-%m-%d") if expiry else None
                     product = Products(name=name, price=price_f, quantity=quantity_i, category=category,
                                        expiry=expiry_value, seller_id=session["seller_id"], image_url=image_url)
@@ -220,11 +215,11 @@ def update_product(product_id):
             image = request.files.get('image')
             if image and image.filename:
                 image_data = image.read()
-                response = sb.storage.from_("product-images").upload(f"{session["seller_id"]}/{image.filename}",
-                                                                     image_data, {"content-type": image.content_type,
-                                                                                  "upsert": "true"})
+                sb.storage.from_("product-images").upload(f"{session['seller_id']}/{image.filename}",
+                                                           image_data, {"content-type": image.content_type,
+                                                                        "upsert": "true"})
                 product.image_url = sb.storage.from_("product-images").get_public_url(
-                    f"{session["seller_id"]}/{image.filename}") or None
+                    f"{session['seller_id']}/{image.filename}") or None
 
             product.name = request.form.get('name', '').strip() or product.name
             product.price = float(request.form.get('price', product.price))

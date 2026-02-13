@@ -14,7 +14,7 @@
                     <th>Sr No.</th>
                     <th>Name</th>
                     <th>Price</th>
-                    <th>Total Sold</th>
+                    <th>Order Frequency</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -23,7 +23,7 @@
                         <tr>
                             <td>{{ i + 1 }}</td>
                             <td>{{ order_items[i]["name"] }}</td>
-                            <td>₹{{ order_items[i]["Price"] }}</td>
+                            <td>₹{{ order_items[i]["price"] }}</td>
                             <td>{{ order_items[i]["quantity"] }}</td>
                         </tr>
                     {% endfor %}
@@ -32,7 +32,7 @@
                         <tr>
                             <td>{{ i + 1 }}</td>
                             <td>{{ order_items[i]["name"] }}</td>
-                            <td>₹{{ order_items[i]["Price"] }}</td>
+                            <td>₹{{ order_items[i]["price"] }}</td>
                             <td>{{ order_items[i]["quantity"] }}</td>
                         </tr>
                     {% endfor %}
