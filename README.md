@@ -67,11 +67,11 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-# PostgreSQL connection (Supabase → Settings → Database)
-DB_USER=postgres
+# PostgreSQL transaction pooler connection (Supabase → Settings → Database)
+DB_USER=yuour_supabase_user
 DB_PASSWORD=your_db_password
 DB_HOST=your_supabase_host
-DB_PORT=5432
+DB_PORT=6543
 DB_NAME=postgres
 
 # Flask session secret key (any random string)
