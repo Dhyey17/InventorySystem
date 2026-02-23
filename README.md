@@ -5,7 +5,7 @@ This is a basic inventory managemt system with
 
 Steps for running this inventory management system
 
-### Step1:
+### Step 1:
 Clone the repository using ```git clone```
 ```terminaloutput
 git clone https://github.com/Dhyey17/InventorySystem.git
@@ -17,14 +17,14 @@ Install the requirements from the requirements file.
 pip install -r requirements.txt
 ```
 
-### Step 4:
+### Step 3:
 Setup your account on <a href="supabase.com">Supabase</a>
 
-### Step 5:
+### Step 4:
 Create a **.env** file with the required variables
 
 
-### Step 6:
+### Step 5:
 Run app.py
 ```terminaloutput
 python app.py
