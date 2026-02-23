@@ -35,7 +35,7 @@ A full-stack web application built with **Flask** for managing products, trackin
 - **Database:** PostgreSQL (hosted on Supabase)
 - **Migrations:** Flask-Migrate (Alembic)
 - **File Storage:** Supabase Storage
-- **Frontend:** Jinja2 templates + CSS (Google Fonts — DM Sans)
+- **Frontend:** Jinja2 templates + CSS
 
 ---
 
